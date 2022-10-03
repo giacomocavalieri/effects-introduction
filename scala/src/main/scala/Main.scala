@@ -1,5 +1,10 @@
-@main def hello: Unit = 
-  println("Hello world!")
-  println(msg)
+import mtl.*
+import mtl.Example.*
+import mtl.given
+import cats.effect.{IO, IOApp}
 
-def msg = "I was compiled by Scala 3. :)"
+object Main extends IOApp.Simple:
+  val run = for
+    res <- maybeDouble[IO](10)
+    _ <- IO.println(f"The result is: $res")
+  yield ()
