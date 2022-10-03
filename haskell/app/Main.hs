@@ -1,4 +1,8 @@
 module Main (main) where
 
+import MTL (maybeDouble)
+
 main :: IO ()
-main = putStrLn "Hello, Haskell!"
+main = do
+  n <- maybeDouble 10
+  putStrLn $ "The result is: " <> show n
