@@ -9,12 +9,14 @@ import org.scalatest.matchers.should.Matchers
 // a specific monad stack: a Reader will allow us to mock the coin flip result
 // a Writer will allow us to log the console output
 type TestApp[A] = ReaderT[Writer[String, _], Boolean, A]
+
 extension [A](a: TestApp[A])
   def runWithRiggedCoin(coinResult: Boolean): (String, A) =
     a.run(coinResult).run
 
 given CoinFlip[TestApp] with
   def flipCoin: TestApp[Boolean] = ReaderT.ask
+
 given Console[TestApp] with
   def printLine(s: String): TestApp[Unit] = ReaderT(_ => Writer.tell(s))
 

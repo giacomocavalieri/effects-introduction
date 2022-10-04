@@ -1,7 +1,8 @@
 module Main (main) where
 
-import MTLTest (tests)
-import Test.HUnit (runTestTTAndExit)
+import Test.Hspec (describe, hspec)
+import Test.MTL (test)
 
 main :: IO ()
-main = runTestTTAndExit tests
+main = hspec $ do
+  describe "mtl tests" Test.MTL.test

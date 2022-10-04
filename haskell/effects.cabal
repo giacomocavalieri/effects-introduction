@@ -20,6 +20,7 @@ common common-options
     default-extensions: ConstraintKinds
                         DeriveGeneric
                         GADTs
+                        GeneralizedNewtypeDeriving
                         InstanceSigs
                         KindSignatures
                         LambdaCase
@@ -54,9 +55,9 @@ test-suite tests
     hs-source-dirs:   tests
     build-depends:    base ^>=4.16.3.0
                     , effects
-                    , HUnit ^>=1.6.2.0
+                    , hspec ^>=2.10.6
                     , transformers ^>=0.5.6.2
-    other-modules:    MTLTest
+    other-modules:    Test.MTL
 
 executable effects
     import:           common-exe
