@@ -9,6 +9,10 @@ import org.scalatest.matchers.should.Matchers
 // a specific monad stack: a Reader will allow us to mock the coin flip result
 // a Writer will allow us to log the console output
 type TestApp[A] = ReaderT[Writer[String, _], Boolean, A]
+// Note that `Writer[String, _]` is a lambda on types
+// (i.e. Writer[String, _] === [A] =>> Writer[String, A])
+// enabled by the compiler plugin -Ykind-projector:underscores, it allows to define type-level
+// lambdas with the same syntax as term-level lambdas
 
 extension [A](a: TestApp[A])
   def runWithRiggedCoin(coinResult: Boolean): (String, A) =
