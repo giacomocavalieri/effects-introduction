@@ -1,0 +1,31 @@
+name: Publish slides
+on: 
+  push:
+  pull_request:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3.0.2
+        with:
+          submodules: true
+          fetch-depth: 0
+
+      - name: Setup Hugo
+        uses: peaceiris/actions-hugo@v2.5.0
+        with:
+          hugo-version: '0.101.0'
+          extended: true
+
+      - name: Build Site
+        run: |
+          cd slides
+          hugo --minify
+
+      - name: Deploy site
+        if: ${{ github.event_name != 'pull_request' && github.ref == 'refs/heads/main' }}
+        uses: JamesIves/github-pages-deploy-action@v4.4.0
+        with:
+          BRANCH: gh-pages
+          FOLDER: slides/public

@@ -1,0 +1,21 @@
+baseURL = "https://giacomocavalieri.github.io/effects-introduction/"
+languageCode = "en-us"
+title = "effects introductory slides"
+
+theme = "reveal-hugo"
+
+[markup.goldmark.renderer]
+unsafe = true
+
+[outputFormats.Reveal]
+baseName = "index"
+mediaType = "text/html"
+isHTML = true
+
+[params.reveal_hugo]
+custom_theme = "custom.css"
+slide_number = true
+
+[markup.highlight]
+style = "monokai"
+noClasses = false
