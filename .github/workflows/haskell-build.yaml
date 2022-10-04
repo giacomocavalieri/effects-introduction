@@ -23,8 +23,8 @@ jobs:
         with:
           path: |
             ${{ steps.setup-haskell-build-env.outputs.cabal-store }}
-            dist-newstyle
-          key: cabal-${{ hashFiles('cabal.project.freeze') }}
+            haskell/dist-newstyle
+          key: cabal-${{ hashFiles('haskell/cabal.project.freeze') }}
           restore-keys: cabal-
       - name: test
         run: |
