@@ -130,6 +130,7 @@
 /*********************************************
  * GLOBAL STYLES
  *********************************************/
+
 body {
   background: #fff;
   background-color: #fff;
@@ -183,6 +184,8 @@ body {
 .reveal p {
   line-height: 1.3;
   color: var(--text-normal);
+  margin-left: 1em;
+  margin-right: 1em;
 }
 
 /* Ensure certain elements are never larger than the slide itself */
@@ -211,6 +214,8 @@ body {
   text-align: left;
   margin: 0;
   margin-top: 1.3rem;
+  margin-left: 1em;
+  margin-right: 1em;
 }
 
 .reveal ul li {
@@ -218,7 +223,7 @@ body {
 }
 
 .reveal p+ul {
-  margin-top: 0;
+  margin-top: 0.5rem;
 }
 
 .reveal ol {
@@ -349,6 +354,12 @@ body {
 
 .reveal sup {
   vertical-align: super;
+  font-size: 0.9rem;
+}
+
+.reveal h2>sup {
+  vertical-align: super;
+  font-size: 1rem;
 }
 
 .reveal sub {
