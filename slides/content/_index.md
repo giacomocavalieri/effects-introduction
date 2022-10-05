@@ -12,7 +12,7 @@ outputs = ["Reveal"]
 
 The essence of programming ultimately boils down to performing effects. As Simon Peyton Jones puts it:
 
- >If a program has no side-effects there's no point in running it, isn't it? You have a black box, you press go and it gets hot but there's no output [\^1](#resources)
+ >If a program has no side-effects there's no point in running it, isn't it? You have a black box, you press go and it gets hot but there's no output <sup>[\^1](#resources)</sup>
 
 ---
 
@@ -72,23 +72,50 @@ val ns: IO[List[Int]] = List.fill(5)(p).sequence
 
 ---
 
-Monads can capture the idea of sequencing a wide range of side effects:
+## The problem with IO
 
-- `State` mutable global state
-- `Maybe` possible failure with short-circuiting
-- `Reader` global immutable state
-- `List` non-determinism
-- `Future, Writer, Parser, ...`
+Simply using `IO` does not magically solve our problems:
+
+- the code inside `IO` is just as hard to test as the impure counterpart
+- inside `IO` I could perform _all kinds_ of I/O (read a file, send messages over  
+  the network, fail with an exception, ...)
+- having the `IO` monad everywhere is like not having it at all!
 
 ---
 
-## Dealing with multiple side-effects
+## Goals of an effect system
 
-However our code usually needs more than a single side-effect, luckily, thanks to _monad transformers_ monads can be _stacked_ together to obtain composite monads
+We wish to express the side effects our code can perform in a way that:
+
+- the code can be _easily composed and tested_
+- the correct handling of side effects is _checked at compile-time_
+- the side effects can be expressed with a _granularity suitable for our business needs_
+
+---
+
+Each effect system can be evaluated in terms of:
+
+- cognitive load
+- ease of use
+- composability
+- testability
+- performance
+- maturity
+- ...
+
+---
+
+## Monad Stacks
+
+Thanks to _monad transformers,_ monads can be _stacked_ together to obtain composite monads
+that provide the side effects of each one of the monads composing the stack
 
 ```scala
+// Enrich M[_] with the effects of the Maybe monad (failure)
 final case class MaybeT[M[_], A](runMaybeT : M[Maybe[A]])
+// Enrich M[_] with the effects of the State monad (global mutable state)
 final case class StateT[S, M[_], A](runStateT : S => M[(A, S)])
+// Enrich M[_] with the effects of the Reader monad (global read-only state) 
 final case class ReaderT[S, M[_], A](runReaderT : S => M[A])
 ```
 
@@ -112,35 +139,33 @@ program :: MaybeT (ReaderT String IO) Int
 program = ...
 ```
 
-here `program` can perform 3 kinds of side effects:
+Using a monad stack allows expressing a program that can perform 3 kinds of side effects:
+failure (`MaybeT`), reading a global immutable configuration (`ReaderT`) and performing I/O (`IO`)  
 
-- it can fail (`MaybeT`)
-- it can read a global configuration of type `String` (`ReaderT`)
-- it can perform I/O (`IO`)
-
----
-
-There still are problems: the code inside `IO` is just as hard to test as the impure counterpart; the only way to get a result out of `IO` is to interpret the data structure ultimately performing the side effects
-
-((TODO Esempio di codice))
-((TODO trovare articolo in cui si parla di come esplicitare la monade in questo modo rompe incapsulamente, program against an interface))
+However, programming against a particular monad stack forces one to use a specific implementation
+_breaking encapsulation_ <sup>[\^2](#resources)</sup>
 
 ---
 
-## MTL / Tagless Final
+## MTL / Tagless Final <sup>[\^3](#resources)</sup>
 
 ```scala
-def maybeDouble[M[_]: Monad: CoinFlip: Console](n: Int): M[Int] =
-  for 
-    _     <- Console[M].println("Flipping a coin")
-    heads <- CoinFlip[M].flipCoin
+trait CoinFlip[F[_]] { def flipCoin: F[Boolean] }
+trait Console[F[_]]  { def printLine(s: String): F[Unit] }
+
+def maybeDouble[M[_]: Monad: CoinFlip: Console](n: Int): M[Int] = for 
+  _     <- Console[M].printLine("Flipping a coin")
+  heads <- CoinFlip[M].flipCoin
   yield (if heads then n*2 else n)
 ```
 
 ```haskell
+class CoinFlip m where flipCoin :: m Bool
+class Console  m where printLine :: String -> m ()
+
 maybeDouble :: (Monad m, CoinFlip m, Console m) => Int -> m Int
 maybeDouble n = do
-  println "Flipping a coin"
+  printLine "Flipping a coin"
   heads <- flipCoin
   pure $ if heads then n*2 else n
 ```
@@ -150,10 +175,9 @@ maybeDouble n = do
 ## Free monads
 
 ```scala
-def maybeDouble(n: Int): App[Int] =
-  for
-    _     <- print("Flipping a coin")
-    heads <- flipCoin
+def maybeDouble(n: Int): App[Int] = for
+  _     <- print("Flipping a coin")
+  heads <- flipCoin
   yield (if heads then n*2 else n)
 ```
 
@@ -167,15 +191,18 @@ maybeDouble n = do
 
 ---
 
-## Unison
+## Ad hoc languages
 
 ```haskell
-maybeDouble : Int -> {CoinFlip, Console} Int
+structural ability CoinFlip where flipCoin : Boolean
+structural ability Console  where printLine : Text -> ()
+
+maybeDouble : Nat ->  {CoinFlip, Console} Nat
 maybeDouble n =
-  println "Flipping a coin"
+  printLine "Flipping a coin!"
   heads = flipCoin
   if heads then n*2 else n
-  -- One can use a direct style, no monadic binding!
+  -- One can use a direct style, no monadic binding:
   -- if flipCoin then n*2 else n
 ```
 
@@ -184,4 +211,6 @@ maybeDouble n =
 <!-- .slide: id="sources" -->
 ## Resources
 
-1. [Simon Peyton Jones - Haskell is Useless](https://www.youtube.com/watch?v=iSmkqocn0oQ) ^1
+1. [Simon P. Jones - Haskell is Useless](https://www.youtube.com/watch?v=iSmkqocn0oQ)
+2. [Kammar, Lindley and Oury - Handlers in Action](http://dx.doi.org/10.1145/2500365.2500590)
+3. [Mark P. Jones - Functional Programming with Overloading and Higher-Order Polymorphism](http://web.cecs.pdx.edu/~mpj/pubs/springschool95.pdf)
