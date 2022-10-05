@@ -1,7 +1,7 @@
-module Stepper.Interpreters (IOStepper (..)) where
+module MTL.Stepper.Interpreters (IOStepper (..)) where
 
 import Control.Monad (void)
-import Stepper.Core (Mode (..), Stepper (askValue, notifyStep))
+import MTL.Stepper.Core (Mode (..), Stepper (askValue, notifyStep))
 
 newtype IOStepper a = IOStepper {runIOStepper :: IO a}
   deriving (Functor, Applicative, Monad)

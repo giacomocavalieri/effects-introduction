@@ -4,7 +4,7 @@ import MTL.Core (maybeDouble)
 import Test.Hspec (SpecWith, context, describe, it, shouldBe)
 import Test.MTL.Interpreters (runWithRiggedCoin)
 
--- Now testing the core logic is a breeze!
+-- With the test interpreter testing the core logic is a breeze!
 test :: SpecWith ()
 test = do
   let program = maybeDouble 10

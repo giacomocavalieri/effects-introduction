@@ -1,7 +1,7 @@
-module MTL.Interpreters.Stepper (StepperApp (..)) where
+module MTL.Core.Interpreters.Stepper (StepperApp (..)) where
 
 import MTL.Core (CoinFlip (flipCoin), Console (printLine))
-import Stepper.Core (Stepper, askBoundedEnum, notifyStepAndWait)
+import MTL.Stepper.Core (Stepper, askBoundedEnum, notifyStepAndWait)
 
 -- One can get creative with the possible interpreters, this one for example translates the
 -- CoinFlip and Console ability to any monad that can provide the Stepper ability:

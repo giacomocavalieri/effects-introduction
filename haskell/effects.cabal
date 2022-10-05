@@ -44,9 +44,8 @@ common common-test
 library
     import:            common-options
     hs-source-dirs:    lib
-    exposed-modules:   MTL.Core, MTL.Interpreters
-                     , MTL.Interpreters.Stepper, MTL.Interpreters.Production
-                     , Stepper.Core, Stepper.Interpreters
+    exposed-modules:   MTL.Core, MTL.Core.Interpreters.Stepper, MTL.Core.Interpreters.Production
+                     , MTL.Stepper.Core, MTL.Stepper.Interpreters
     build-depends:     base ^>=4.16.3.0
                      , random ^>=1.2.1.1
                      , transformers ^>=0.5.6.2

@@ -1,4 +1,4 @@
-module MTL.Interpreters.Production (ProductionApp (..)) where
+module MTL.Core.Interpreters.Production (ProductionApp (..)) where
 
 import MTL.Core (CoinFlip (flipCoin), Console (printLine))
 import System.Random (randomIO)

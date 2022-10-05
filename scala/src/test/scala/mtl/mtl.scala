@@ -1,47 +1,32 @@
 package mtl
 
-import cats.data.{ReaderT, Writer}
-import Example.*
+import mtl.core.maybeDouble
+import mtl.interpreters.Test.{given, *}
 import org.scalatest.wordspec.AnyWordSpec
 import org.scalatest.matchers.should.Matchers
 
-// We can define a custom F to test the core logic of our function. Here we can use
-// a specific monad stack: a Reader will allow us to mock the coin flip result
-// a Writer will allow us to log the console output
-type TestApp[A] = ReaderT[Writer[String, _], Boolean, A]
-// Note that `Writer[String, _]` is a lambda on types
-// (i.e. Writer[String, _] === [A] =>> Writer[String, A])
-// enabled by the compiler plugin -Ykind-projector:underscores, it allows to define type-level
-// lambdas with the same syntax as term-level lambdas
-
-extension [A](a: TestApp[A])
-  def runWithRiggedCoin(coinResult: Boolean): (String, A) =
-    a.run(coinResult).run
-
-given CoinFlip[TestApp] with
-  def flipCoin: TestApp[Boolean] = ReaderT.ask
-
-given Console[TestApp] with
-  def printLine(s: String): TestApp[Unit] = ReaderT(_ => Writer.tell(s))
-
-// Now testing the core logic is a breeze!
+// With the test interpreter testing the core logic is a breeze!
 class Test extends AnyWordSpec, Matchers:
   val program = maybeDouble[TestApp](10)
   "maybeDouble" when {
     "executed" should {
       "always print a message regardless of the coin flip result" in {
-        program.runWithRiggedCoin(true)._1 shouldBe "Flipping a coin!"
-        program.runWithRiggedCoin(false)._1 shouldBe "Flipping a coin!"
+        val (msg1, _) = program.runWithRiggedCoin(true)
+        val (msg2, _) = program.runWithRiggedCoin(false)
+        msg1 shouldBe "Flipping a coin!"
+        msg2 shouldBe "Flipping a coin!"
       }
     }
     "the coin flip result is heads" should {
       "double the number" in {
-        program.runWithRiggedCoin(true)._2 shouldBe 20
+        val (_, res) = program.runWithRiggedCoin(true)
+        res shouldBe 20
       }
     }
     "the coin flip result is tails" should {
       "not double the number" in {
-        program.runWithRiggedCoin(false)._2 shouldBe 10
+        val (_, res) = program.runWithRiggedCoin(false)
+        res shouldBe 10
       }
     }
   }
