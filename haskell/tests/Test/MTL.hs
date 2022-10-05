@@ -1,26 +1,8 @@
 module Test.MTL (test) where
 
-import Control.Monad.Trans.Class (lift)
-import Control.Monad.Trans.Reader (ReaderT (runReaderT), ask)
-import Control.Monad.Trans.Writer (Writer, runWriter, tell)
-import MTL (CoinFlip (..), Console (..), maybeDouble)
+import MTL.Core (maybeDouble)
 import Test.Hspec (SpecWith, context, describe, it, shouldBe)
-
--- We can define a custom `m` to test the core logic of our function. Here we can use
--- a specific monad stack: a Reader will allow us to mock the coin flip result
--- a Writer will allow us to log the console output
-newtype TestApp a = TestApp (ReaderT Bool (Writer String) a) deriving (Functor, Applicative, Monad)
-
-runWithRiggedCoin :: TestApp a -> Bool -> (a, String)
-runWithRiggedCoin (TestApp app) coinResult = runWriter $ runReaderT app coinResult
-
-instance CoinFlip TestApp where
-  flipCoin :: TestApp Bool
-  flipCoin = TestApp ask
-
-instance Console TestApp where
-  printLine :: String -> TestApp ()
-  printLine = TestApp . lift . tell
+import Test.MTL.Interpreters (runWithRiggedCoin)
 
 -- Now testing the core logic is a breeze!
 test :: SpecWith ()

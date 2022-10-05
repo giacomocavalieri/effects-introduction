@@ -112,7 +112,7 @@ program :: MaybeT (ReaderT String IO) Int
 program = ...
 ```
 
-`program` can perform 3 kinds of side-effects:
+here `program` can perform 3 kinds of side effects:
 
 - it can fail (`MaybeT`)
 - it can read a global configuration of type `String` (`ReaderT`)

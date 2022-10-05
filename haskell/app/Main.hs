@@ -1,8 +1,10 @@
 module Main (main) where
 
-import MTL (maybeDouble)
+import MTL.Core (maybeDouble)
+import MTL.Interpreters.Stepper (StepperApp (..))
+import Stepper.Interpreters (runIOStepper)
 
 main :: IO ()
 main = do
-  n <- maybeDouble 10
+  n <- runIOStepper $ runStepperApp $ maybeDouble 10
   putStrLn $ "The result is: " <> show n
