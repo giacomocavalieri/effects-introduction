@@ -25,10 +25,12 @@ common common-options
                         KindSignatures
                         LambdaCase
                         OverloadedStrings
+                        RankNTypes
                         ScopedTypeVariables
                         StandaloneDeriving
                         TupleSections
                         TypeApplications
+                        TypeOperators
                         ViewPatterns
 
 common common-exe

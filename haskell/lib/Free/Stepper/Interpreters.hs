@@ -1,11 +1,11 @@
-module Free.Stepper.Interpreters (interpretStepper) where
+module Free.Stepper.Interpreters (stepperToIOInterpreter) where
 
 import Control.Monad (void)
-import Control.Monad.Free (iterM)
-import Free.Stepper.Core (Mode (..), Stepper, StepperDSL (..))
+import Free.Core (type (~>))
+import Free.Stepper.Core (Mode (..), StepperDSL (..))
 
-interpretStepper :: Stepper a -> IO a
-interpretStepper = iterM $ \case
+stepperToIOInterpreter :: StepperDSL ~> IO
+stepperToIOInterpreter = \case
   AskValue msg parser k -> askValueIO msg parser >>= k
   NotifyStep mode msg k -> notifyStepIO mode msg >>= k
 

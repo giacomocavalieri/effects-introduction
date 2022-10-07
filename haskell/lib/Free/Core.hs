@@ -1,7 +1,8 @@
 {-# LANGUAGE DeriveFunctor #-}
-{-# OPTIONS_GHC -Wno-unrecognised-pragmas #-}
-
+{-# LANGUAGE RankNTypes #-}
 {-# HLINT ignore "Use newtype instead of data" #-}
+{-# LANGUAGE TypeOperators #-}
+{-# OPTIONS_GHC -Wno-unrecognised-pragmas #-}
 
 module Free.Core (
   flipCoin,
@@ -14,9 +15,16 @@ module Free.Core (
   CoinFlip,
   Console,
   App,
+  type (~>),
+  runWith,
 ) where
 
-import Control.Monad.Free (Free (..), liftF)
+import Control.Monad.Free (Free (..), iterM, liftF)
+
+type f ~> g = forall a. f (g a) -> g a
+
+runWith :: (Functor f, Monad g) => Free f a -> (f ~> g) -> g a
+runWith app interpreter = iterM interpreter app
 
 -- Our core domain actions, we can be as granular as we want
 -- but if our program needs to use more than one DSL we need to combine

@@ -11,7 +11,7 @@ import cats.syntax.all.*
 object Test:
   extension [A](a: App[A])
     def runWithRiggedCoin(coinValue: Boolean): (String, A) =
-      a.interpretWith(testAppInterpreter(coinValue)).run
+      a.runWith(testAppInterpreter(coinValue)).run
 
   def testCoinFlipInterpreter[M[_]: Monad](coinValue: Boolean): CoinFlipDSL ~> M =
     new (CoinFlipDSL ~> M):

@@ -1,9 +1,10 @@
 module Main (main) where
 
 import qualified Free.App as Free (maybeDouble)
-import qualified Free.Core.Interpreters.Production as Free (interpretApp)
-import qualified Free.Core.Interpreters.Stepper as Free (interpretAppToStepper)
-import qualified Free.Stepper.Interpreters as Free (interpretStepper)
+import Free.Core (runWith)
+import qualified Free.Core.Interpreters.Production as Free
+import qualified Free.Core.Interpreters.Stepper as Free
+import qualified Free.Stepper.Interpreters as Free
 import qualified MTL.Core as MTL (maybeDouble)
 import qualified MTL.Core.Interpreters.Production as MTL (runProductionApp)
 import qualified MTL.Core.Interpreters.Stepper as MTL (StepperApp (..))
@@ -35,5 +36,8 @@ mainMTL = chooseYN "Run interactively?" stepByStepProgram productionProgram
 mainFree :: IO Int
 mainFree = chooseYN "Run interactively?" stepByStepProgram productionProgram
  where
-  stepByStepProgram = Free.interpretStepper $ Free.interpretAppToStepper $ Free.maybeDouble 10
-  productionProgram = Free.interpretApp $ Free.maybeDouble 10
+  stepByStepProgram =
+    Free.maybeDouble 10
+      `runWith` Free.appToStepperInterpreter
+      `runWith` Free.stepperToIOInterpreter
+  productionProgram = Free.maybeDouble 10 `runWith` Free.appToIOInterpreter
