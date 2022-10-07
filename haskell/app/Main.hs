@@ -1,17 +1,39 @@
 module Main (main) where
 
-import MTL.Core (maybeDouble)
-import MTL.Core.Interpreters.Production (runProductionApp)
-import MTL.Core.Interpreters.Stepper (StepperApp (..))
-import MTL.Stepper.Interpreters (runIOStepper)
+import qualified Free.App as Free (maybeDouble)
+import qualified Free.Core.Interpreters.Production as Free (interpretApp)
+import qualified Free.Core.Interpreters.Stepper as Free (interpretAppToStepper)
+import qualified Free.Stepper.Interpreters as Free (interpretStepper)
+import qualified MTL.Core as MTL (maybeDouble)
+import qualified MTL.Core.Interpreters.Production as MTL (runProductionApp)
+import qualified MTL.Core.Interpreters.Stepper as MTL (StepperApp (..))
+import qualified MTL.Stepper.Interpreters as MTL (runIOStepper)
 
 main :: IO ()
 main = do
-  let stepByStepProgram = runIOStepper $ runStepperApp $ maybeDouble 10
-  let productionProgram = runProductionApp $ maybeDouble 10
-  putStrLn "Run interactively? [y/n]"
-  res <-
-    getLine >>= \case
-      "y" -> stepByStepProgram
-      _ -> productionProgram
+  let msg = "1. run the MTL example\n2. run the Free example\nChoose one of"
+  res <- choose msg "1" "2" mainMTL mainFree
   putStrLn $ "The result is: " <> show res
+
+choose :: String -> String -> String -> IO a -> IO a -> IO a
+choose msg opta optb a b = do
+  putStrLn $ mconcat [msg, " [", opta, "/", optb, "]"]
+  getLine >>= \case
+    s | s == opta -> a
+    s | s == optb -> b
+    s -> putStrLn (s <> " is not one of the two options") >> choose msg opta optb a b
+
+chooseYN :: String -> IO a -> IO a -> IO a
+chooseYN msg = choose msg "y" "n"
+
+mainMTL :: IO Int
+mainMTL = chooseYN "Run interactively?" stepByStepProgram productionProgram
+ where
+  stepByStepProgram = MTL.runIOStepper $ MTL.runStepperApp $ MTL.maybeDouble 10
+  productionProgram = MTL.runProductionApp $ MTL.maybeDouble 10
+
+mainFree :: IO Int
+mainFree = chooseYN "Run interactively?" stepByStepProgram productionProgram
+ where
+  stepByStepProgram = Free.interpretStepper $ Free.interpretAppToStepper $ Free.maybeDouble 10
+  productionProgram = Free.interpretApp $ Free.maybeDouble 10
