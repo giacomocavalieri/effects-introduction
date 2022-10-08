@@ -35,6 +35,7 @@ examples in the other.
 ## A note on the Unison code
 
 [Unison](https://www.unison-lang.org) is a content-addressed language and stores its code in a format that
-GitHub can not currently show; that's why for now in the repository I included some simple `.u` files
-to make it easier to browse the code and keep everything in one place instead of using
-[Unison Share](https://share.unison-lang.org).
+GitHub can not currently show; that's why for now in the repository I included a simple `code.u` file with
+all thee definitions that would be stored in the codebase. It's just to make it easier to keep everything
+in one place. However, I highly recommend to browse the Unison code directly from its
+[repository on Unison Share](https://share.unison-lang.org/@giacomocavalieri/code/latest/namespaces/public/learning/thesis/coinFlip)
