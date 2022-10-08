@@ -4,11 +4,6 @@ outputs = ["Reveal"]
 langToDisplay = "scala"
 +++
 
-
-# Modellazione degli Effetti
-
----
-
 ## Effects
 
 The essence of programming ultimately boils down to performing effects. As Simon Peyton Jones puts it:
@@ -110,7 +105,7 @@ Simply using `IO` does not magically solve our problems:
 
 ## Goals of an effect system
 
-We wish to express the side effects our code can perform in a way that:
+We wish to express the side effects our code can perform so that:
 
 - the code can be _easily composed and tested_
 - the correct handling of side effects is _checked at compile-time_
@@ -267,11 +262,11 @@ main = do
 
 ## Free monads
 
-The effects/capabilities are encoded as an ADT/GADT, every case must also
-contain a field that represents the _continuation:_ a function that
-takes an argument of a type appropriate to the effect being carried out
-and returns a new value. For example, the continuation of the `FlipCoin` action takes a `Boolean`
-value which represents the outcome of the coin flip
+The Free Monad pattern can also be quite useful to model the core domain logic
+_decoupling the code description from its interpretation<sup>[^4](#resources)</sup>_
+
+Despite needing a bit more boilerplate code, the program description is
+essentially the same as the MTL's one
 
 {{< code scala >}}
 
@@ -394,24 +389,28 @@ maybeDouble n =
 
 ---
 
-## Interpreting a function with abilities: handlers
+## Interpreting a function with abilities
 
-```ml
-interpreters.runProductionApp : '{Console, CoinFlip} a ->{IO, Exception} a
-  interpreters.runProductionApp comp =
-    comp |> runConsoleIO |> runCoinFlipRandom |> lcg 11
+The type system makes sure that no ability is unhandled and the main entry point of
+the application can only access the `IO` and `Exception` abilities.
+Unison provides _handlers_ that can remove or replace ability requirements in the
+functions' signature by interpreting them
 
-interpreters.runConsoleIO : '{e, Console} a -> '{e, IO, Exception} a
-interpreters.runConsoleIO comp _ =
+```haskell
+runProductionApp : (() -> {Console, CoinFlip} a) ->{IO, Exception} a
+runProductionApp comp = comp |> runConsoleIO |> runCoinFlipRandom |> lcg 11
+
+runConsoleIO : (() -> {e, Console} a) -> () -> {e, IO, Exception} a
+runConsoleIO comp _ =
   handler = cases
-    {printLine msg -> k} ->
-      console.printLine msg
-      handle !k with handler
+    {printLine msg -> k} ->  -- handle a printLine request
+      console.printLine msg  -- print the message using the IO ability 
+      handle !k with handler -- handle the continuation as well
     { r }                -> r
   handle !comp with handler
 
-interpreters.runCoinFlipRandom : '{e, CoinFlip} a -> '{e, Random} a
-interpreters.runCoinFlipRandom comp _ =
+runCoinFlipRandom : (() -> {e, CoinFlip} a) -> () -> {e, Random} a
+runCoinFlipRandom comp _ =
   handler = cases
     {flipCoin -> k} -> handle k !Random.boolean with handler
     { r }           -> r
@@ -426,3 +425,4 @@ interpreters.runCoinFlipRandom comp _ =
 1. [Simon P. Jones - Haskell is Useless](https://www.youtube.com/watch?v=iSmkqocn0oQ)
 2. [Kammar, Lindley and Oury - Handlers in Action](http://dx.doi.org/10.1145/2500365.2500590)
 3. [Mark P. Jones - Functional Programming with Overloading and Higher-Order Polymorphism](http://web.cecs.pdx.edu/~mpj/pubs/springschool95.pdf)
+4. [Alexander Granin - Functional Design and Architecture](https://www.manning.com/books/functional-design-and-architecture)

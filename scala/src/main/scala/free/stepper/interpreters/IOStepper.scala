@@ -6,7 +6,7 @@ import free.stepper.Core.*
 import free.stepper.Core.StepperDSL.*
 
 object IOStepper:
-  val stepperToIOInterpreter: StepperDSL ~> IO = new (StepperDSL ~> IO):
+  val stepperToIOInterpreter = new (StepperDSL ~> IO):
     override def apply[A](s: StepperDSL[A]): IO[A] = s match
       case AskValue(msg, parser) => askValue(msg, parser)
       case NotifyStep(mode, msg) => notifyStep(mode, msg)
