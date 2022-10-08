@@ -21,16 +21,16 @@ Then, for each effect system it shows:
 - how the core logic of the resulting code can be tested
 - how the program could be interpreted in different ways
 
-All the examples are written both in Haskell and Scala: the projects have almost exactly the same
+All the examples are written in Haskell, Scala and Unison: the projects have almost exactly the same
 structure so that if you know one of the languages it (hopefully) should not be too hard to follow the
 examples in the other.
 
 ## Running the examples
 
-|                             | Scala      | Haskell             |
-|-----------------------------|------------|---------------------|
-| run the interactive example | `sbt run`  | `cabal run effects` |
-| run the tests               | `sbt test` | `cabal test`        |
+|                             | Scala      | Haskell             | Unison (in `ucm`)   |
+|-----------------------------|------------|---------------------|---------------------|
+| run the interactive example | `sbt run`  | `cabal run effects` | `run coinFlip.main` |
+| run the tests               | `sbt test` | `cabal test`        | `test`              |
 
 ## A note on the Unison code
 
