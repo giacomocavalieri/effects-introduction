@@ -11,18 +11,24 @@ coinFlip.maybeDouble n =
   heads = flipCoin
   if heads then n*2 else n
 
-{{ The {maybeDouble} program interpreted as an `IO` action }}
 coinFlip.main : '{IO, Exception} ()
 coinFlip.main = do
-  res = runProductionApp '(maybeDouble 10)
-  console.printLine ("The result is " ++ toText res)
+  console.printLine "Run the program interactively? [y/n]"
+  res = match !console.getLine with
+    "y" -> !stepper.main
+    _ -> !mainIO
+  console.printLine ("The result is: " ++ Nat.toText res)
+
+{{ The {maybeDouble} program interpreted as an `IO` action }}
+coinFlip.mainIO : '{IO, Exception} Nat
+coinFlip.mainIO _ = runProductionApp '(maybeDouble 10)
 
 {{ The {maybeDouble} program interpreted as an `IO` whose execution
    is step by step }}
-coinFlip.stepper.main : '{IO, Exception} ()
+coinFlip.stepper.main : '{IO, Exception} Nat
 coinFlip.stepper.main _ =
-  res = '(maybeDouble 10) |> coinFlipToStepper |> consoleToStepper |> runStepperIO
-  console.printLine ("The result is: " ++ toText res)
+  '(maybeDouble 10) |> coinFlipToStepper |> consoleToStepper |> runStepperIO
+  
 
 -- Production interpreter
 
@@ -172,7 +178,7 @@ coinFlip.README = {{
 
   You can see three different examples of interpretation:
 
-  - {coinFlip.main} interprets the program as one would expect, using a
+  - {coinFlip.mainIO} interprets the program as one would expect, using a
     random result for the coin flip and logging the messages to the console
     thanks to the {runProductionApp} interpreter
   - to test the core domain logic it is used the {runTestApp} interpreter
