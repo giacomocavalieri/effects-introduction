@@ -1,6 +1,7 @@
 +++
 title = "Effects"
 outputs = ["Reveal"]
+langToDisplay = "scala"
 +++
 
 
@@ -29,7 +30,7 @@ def maybeDouble(n: Int): Int =
 
 ---
 
-The problem with unrestricted side-effects is that there no longer is _referential transparency:_ while one can factor out duplicate values the same is not true for statements, they are not easily testable and it is overall harder to reason about the program's behavior
+The problem with unrestricted side effects is that there no longer is _referential transparency:_ while one can factor out duplicate values the same is not true for statements, they are not easily testable and it is overall harder to reason about the program's behavior
 
 ```scala
 val program1: Int = maybeDouble(1) + maybeDouble(1)
@@ -44,12 +45,18 @@ val program2: Int = { val n = maybeDouble(1); n + n }
 
 In a purely functional world the key difference is that a program no longer performs the side effects but it is an immutable data structure that _describes_ what side effects need to be performed:
 
+{{< code scala >}}
+
 ```scala
 def maybeDouble(n: Int): IO[Int] = for
   _     <- IO.println("Flipping a coin")
   heads <- IO(util.Random.nextBoolean)
 yield (if heads then n*2 else n)
 ```
+
+{{< /code >}}
+
+{{< code haskell >}}
 
 ```haskell
 maybeDouble :: Int -> IO Int
@@ -59,14 +66,32 @@ maybeDouble n = do
   pure $ if heads then n*2 else n
 ```
 
+{{< /code >}}
+
 ---
 
 Thanks to the `IO` monad one can treat _programs as first-class values:_
+
+{{< code scala >}}
 
 ```scala
 val p = maybeDouble(10)
 val ns: IO[List[Int]] = List.fill(5)(p).sequence
 ```
+
+{{< /code >}}
+
+{{< code haskell >}}
+
+```haskell
+p :: IO Int
+p = maybeDouble 10
+
+ns :: IO [Int]
+ns = sequence $ replicate 5 p
+```
+
+{{< /code >}}
 
 `p` is not an integer value that could be either 10 or 20; it is an immutable data structure that describes the logic with which 10 may or may not be doubled by performing side-effects
 
@@ -110,6 +135,8 @@ Each effect system can be evaluated in terms of:
 Thanks to _monad transformers,_ monads can be _stacked_ together to obtain composite monads
 that provide the side effects of each one of the monads composing the stack
 
+{{< code scala >}}
+
 ```scala
 // Enrich M[_] with the effects of the Maybe monad (failure)
 final case class MaybeT[M[_], A](runMaybeT : M[Maybe[A]])
@@ -119,13 +146,20 @@ final case class StateT[S, M[_], A](runStateT : S => M[(A, S)])
 final case class ReaderT[S, M[_], A](runReaderT : S => M[A])
 ```
 
+{{< /code >}}
+{{< code haskell >}}
+
 ```haskell
 newtype MaybeT    m a = MaybeT  { runMaybeT  :: m (Maybe a) }
 newtype StateT  s m a = StateT  { runStateT  :: s -> m (a, s) }
 newtype ReaderT s m a = ReaderT { runReaderT :: s -> m a }
 ```
 
+{{< /code >}}
+
 ---
+
+{{< code scala >}}
 
 ```scala
 // With the compiler plugin -Ykind-projector:underscores enabled
@@ -134,10 +168,15 @@ newtype ReaderT s m a = ReaderT { runReaderT :: s -> m a }
 def program: MaybeT[ReaderT[String, IO, _], Int] = ...
 ```
 
+{{< /code >}}
+{{< code haskell >}}
+
 ```haskell
 program :: MaybeT (ReaderT String IO) Int
 program = ...
 ```
+
+{{< /code >}}
 
 Using a monad stack allows expressing a program that can perform 3 kinds of side effects:
 failure (`MaybeT`), reading a global immutable configuration (`ReaderT`) and performing I/O (`IO`)  
@@ -149,15 +188,24 @@ _breaking encapsulation_ <sup>[\^2](#resources)</sup>
 
 ## MTL / Tagless Final <sup>[\^3](#resources)</sup>
 
+The effects/capabilities are encoded with type classes that can be
+used as constraints to express the effects available in a given context
+
+{{< code scala >}}
+
 ```scala
 trait CoinFlip[F[_]] { def flipCoin: F[Boolean] }
 trait Console[F[_]]  { def printLine(s: String): F[Unit] }
 
+// Plus some more boilerplate...
 def maybeDouble[M[_]: Monad: CoinFlip: Console](n: Int): M[Int] = for 
   _     <- Console[M].printLine("Flipping a coin")
   heads <- CoinFlip[M].flipCoin
-  yield (if heads then n*2 else n)
+yield (if heads then n*2 else n)
 ```
+
+{{< /code >}}
+{{< code haskell >}}
 
 ```haskell
 class CoinFlip m where flipCoin :: m Bool
@@ -170,24 +218,153 @@ maybeDouble n = do
   pure $ if heads then n*2 else n
 ```
 
+{{< /code >}}
+
+---
+
+## Interpreting the MTL program
+
+Interpreting the program consists in choosing an appropriate monad
+(inside which all effects can be carried out) and implementing
+the instances of the needed type classes
+
+{{< code scala >}}
+
+```scala
+given CoinFlip[IO] with
+  override def flipCoin: IO[Boolean] = IO(util.Random.nextBoolean)
+
+given Console[IO] with
+  override def printLine(s: String): IO[Unit] = IO.println(s)
+
+def main: IO[Unit] = for
+  res <- maybeDouble[IO](10) // maybeDouble is interpreted as the IO monad
+  _   <- IO.println(s"The result is $res")
+yield ()
+```
+
+{{< /code >}}
+{{< code haskell >}}
+
+```haskell
+instance CoinFlip IO where
+  flipCoin :: IO Bool
+  flipCoin = randomIO
+
+instance Console IO where
+  printLine :: IO ()
+  printLine = putStrLn
+
+main :: IO ()
+main = do
+  res <- maybeDouble 10
+  putStrLn $ "The result is " <> show res
+```
+
+{{< /code >}}
+
 ---
 
 ## Free monads
 
+The effects/capabilities are encoded as an ADT/GADT, every case must also
+contain a field that represents the _continuation:_ a function that
+takes an argument of a type appropriate to the effect being carried out
+and returns a new value. For example, the continuation of the `FlipCoin` action takes a `Boolean`
+value which represents the outcome of the coin flip
+
+{{< code scala >}}
+
 ```scala
+enum CoinFlipDSL[A] { case FlipCoin               extends CoinFlipDSL[Boolean] }
+enum ConsoleDSL[A]  { case PrintLine(msg: String) extends ConsoleDSL[Unit] }
+enum AppDSL[A] {
+  case EvalCoinFlip[B](c: CoinFlip[B]) extends AppDSL[B] // GADT
+  case EvalConsole[B](c: Console[B])   extends AppDSL[B]
+}
+
+// Plus some more boilerplate...
 def maybeDouble(n: Int): App[Int] = for
-  _     <- print("Flipping a coin")
-  heads <- flipCoin
-  yield (if heads then n*2 else n)
+  _     <- App.printLine("Flipping a coin!")
+  heads <- App.flipCoin
+yield (if heads then n * 2 else n)
 ```
 
+{{< /code >}}
+{{< code haskell >}}
+
 ```haskell
+data CoinFlipDSL next = FlipCoin         (Bool -> next)
+data ConsoleDSL  next = PrintLine String (()   -> next)
+data AppDSL next
+  = forall a. EvalCoinFlip (CoinFlip a) (a -> next)
+  | forall a. EvalConsole  (Console a)  (a -> next)
+
+-- Plus some more boilerplate...
 maybeDouble :: Int -> App Int
 maybeDouble n = do
-  println "Flipping a coin"
-  heads <- flipCoin
-  pure $ if heads then n*2 else n
+  App.printLine "Flipping a coin!"
+  heads <- App.flipCoin
+  pure $ if heads then n * 2 else n
 ```
+
+{{< /code >}}
+
+---
+
+## Interpreting the Free monad
+
+Interpreting the program consists in providing a natural transformation
+from the DSL to another language. There could be many interpreters, each one
+_compiling the DSL to a lower-level instruction set_ that can then be interpreted
+inside the `IO` monad
+
+{{< code scala >}}
+
+```scala
+val productionInterpreter = new (AppDSL ~> IO):
+  override def apply[A](a: AppDSL[A]): IO[A] = a match
+    case EvalCoinFlip(c) => c.runWith(productionCoinFlipInterpreter)
+    case EvalConsole(c)  => c.runWith(productionConsoleInterpreter)
+
+val productionCoinFlipInterpreter = new (CoinFlipDSL ~> IO):
+  override def apply[A](cf: CoinFlipDSL[A]): IO[A] = cf match
+    case FlipCoin => IO(util.Random.nextBoolean)
+
+val productionConsoleInterpreter = new (ConsoleDSL ~> IO):
+  override def apply[A](c: ConsoleDSL[A]): IO[A] = c match
+    case PrintLine(msg) => IO.println(msg)
+
+def main = for
+  res <- maybeDouble(10).runWith(productionInterpreter)
+  _   <- IO.println(s"The result is: $res")
+yield ()
+```
+
+{{< /code >}}
+{{< code haskell >}}
+
+```haskell
+type f ~> g = forall a. f (g a) -> g a
+
+appToIOInterpreter :: AppDSL ~> IO
+appToIOInterpreter = \case
+  EvalCoinFlip c k -> c `runWith` coinToIOInterpreter    >>= k
+  EvalConsole  c k -> c `runWith` consoleToIOInterpreter >>= k
+
+coinToIOInterpreter :: CoinFlipDSL ~> IO
+coinToIOInterpreter (FlipCoin k) = randomIO >>= k
+
+consoleToIOInterpreter :: ConsoleDSL ~> IO
+consoleToIOInterpreter (PrintLine msg k) = putStrLn msg >>= k
+
+main :: IO ()
+main = do
+  res <- maybeDouble 10 `runWith` appToIOInterpreter
+  putStrLn $ "The result is: " <> show res
+```
+
+{{< /code >}}
 
 ---
 

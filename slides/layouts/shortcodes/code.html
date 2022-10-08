@@ -1,0 +1,5 @@
+{{ $lang := .Get 0 }}
+{{ $wanted := $.Page.Param "langToDisplay" }}
+{{ if eq $lang $wanted }}
+{{ .Inner | markdownify }}
+{{ end }}
