@@ -8,7 +8,7 @@ langToDisplay = "scala"
 
 The essence of programming ultimately boils down to performing effects. As Simon Peyton Jones puts it:
 
- >If a program has no side-effects there's no point in running it, isn't it? You have a black box, you press go and it gets hot but there's no output <sup>[\^1](#resources)</sup>
+ >If a program has no side-effects there's no point in running it, isn't it? You have a black box, you press go and it gets hot but there's no output <sup>[\^1](#cited-sources)</sup>
 
 ---
 
@@ -25,7 +25,9 @@ def maybeDouble(n: Int): Int =
 
 ---
 
-The problem with unrestricted side effects is that there no longer is _referential transparency:_ while one can factor out duplicate values the same is not true for statements, they are not easily testable and it is overall harder to reason about the program's behavior
+The problem with unrestricted side effects is that there is no _referential transparency:_
+while one can factor out duplicate values the same is not true for statements,
+they are not easily testable and it is overall harder to reason about the program's behavior
 
 ```scala
 val program1: Int = maybeDouble(1) + maybeDouble(1)
@@ -128,7 +130,7 @@ Each effect system can be evaluated in terms of:
 ## Monad Stacks
 
 Thanks to _monad transformers,_ monads can be _stacked_ together to obtain composite monads
-that provide the side effects of each one of the monads composing the stack
+that provide multiple side effects
 
 {{< code scala >}}
 
@@ -177,11 +179,11 @@ Using a monad stack allows expressing a program that can perform 3 kinds of side
 failure (`MaybeT`), reading a global immutable configuration (`ReaderT`) and performing I/O (`IO`)  
 
 However, programming against a particular monad stack forces one to use a specific implementation
-_breaking encapsulation_ <sup>[\^2](#resources)</sup>
+_breaking encapsulation_ <sup>[\^2](#cited-sources)</sup>
 
 ---
 
-## MTL / Tagless Final <sup>[\^3](#resources)</sup>
+## MTL / Tagless Final <sup>[\^3](#cited-sources)</sup>
 
 The effects/capabilities are encoded with type classes that can be
 used as constraints to express the effects available in a given context
@@ -263,7 +265,7 @@ main = do
 ## Free monads
 
 The Free Monad pattern can also be quite useful to model the core domain logic
-_decoupling the code description from its interpretation<sup>[^4](#resources)</sup>_
+_decoupling the code description from its interpretation<sup>[^4](#cited-sources)</sup>_
 
 Despite needing a bit more boilerplate code, the program description is
 essentially the same as the MTL's one
@@ -420,7 +422,7 @@ runCoinFlipRandom comp _ =
 ---
 
 <!-- .slide: id="sources" -->
-## Resources
+## Cited Sources
 
 1. [Simon P. Jones - Haskell is Useless](https://www.youtube.com/watch?v=iSmkqocn0oQ)
 2. [Kammar, Lindley and Oury - Handlers in Action](http://dx.doi.org/10.1145/2500365.2500590)
