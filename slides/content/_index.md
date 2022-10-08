@@ -368,12 +368,21 @@ main = do
 
 ---
 
-## Ad hoc languages
+## Ad hoc languages: Unison
+
+Some languages give native support to algebraic effects: that is
+functions are polymorphic on the effects they may produce and the type checker
+verifies that there are no unhandled effects.
+
+All the following examples are written in [Unison](https://www.unison-lang.org): a statically-typed, functional language which uses _abilities_ as a way to manage
+effects
 
 ```haskell
 structural ability CoinFlip where flipCoin : Boolean
 structural ability Console  where printLine : Text -> ()
 
+-- A function specifies in {} the abilities it needs, this function
+-- requires the CoinFlip and Console abilities
 maybeDouble : Nat ->  {CoinFlip, Console} Nat
 maybeDouble n =
   printLine "Flipping a coin!"
@@ -381,6 +390,32 @@ maybeDouble n =
   if heads then n*2 else n
   -- One can use a direct style, no monadic binding:
   -- if flipCoin then n*2 else n
+```
+
+---
+
+## Interpreting a function with abilities: handlers
+
+```ml
+interpreters.runProductionApp : '{Console, CoinFlip} a ->{IO, Exception} a
+  interpreters.runProductionApp comp =
+    comp |> runConsoleIO |> runCoinFlipRandom |> lcg 11
+
+interpreters.runConsoleIO : '{e, Console} a -> '{e, IO, Exception} a
+interpreters.runConsoleIO comp _ =
+  handler = cases
+    {printLine msg -> k} ->
+      console.printLine msg
+      handle !k with handler
+    { r }                -> r
+  handle !comp with handler
+
+interpreters.runCoinFlipRandom : '{e, CoinFlip} a -> '{e, Random} a
+interpreters.runCoinFlipRandom comp _ =
+  handler = cases
+    {flipCoin -> k} -> handle k !Random.boolean with handler
+    { r }           -> r
+  handle !comp with handler
 ```
 
 ---
