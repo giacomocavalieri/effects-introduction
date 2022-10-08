@@ -1,0 +1,186 @@
+{{ An ability that represents the effect of flipping a coin }}
+structural ability coinFlip.CoinFlip where flipCoin : Boolean
+
+{{ An ability that represents the effect of printing to the console }}
+structural ability coinFlip.Console where printLine : Text -> ()
+
+{{ The core program using the {type CoinFlip} and {type Console} abilities }}
+coinFlip.maybeDouble : Nat ->  {CoinFlip, Console} Nat
+coinFlip.maybeDouble n =
+  printLine "Flipping a coin!"
+  heads = flipCoin
+  if heads then n*2 else n
+
+{{ The {maybeDouble} program interpreted as an `IO` action }}
+coinFlip.main : '{IO, Exception} ()
+coinFlip.main = do
+  res = runProductionApp '(maybeDouble 10)
+  console.printLine ("The result is " ++ toText res)
+
+{{ The {maybeDouble} program interpreted as an `IO` whose execution
+   is step by step }}
+coinFlip.stepper.main : '{IO, Exception} ()
+coinFlip.stepper.main _ =
+  res = '(maybeDouble 10) |> coinFlipToStepper |> consoleToStepper |> runStepperIO
+  console.printLine ("The result is: " ++ toText res)
+
+-- Production interpreter
+
+coinFlip.interpreters.runProductionApp : '{CoinFlip, Console} a -> {IO, Exception} a
+coinFlip.interpreters.runProductionApp comp =
+  comp
+    |> runConsoleIO
+    |> runCoinFlipRandom
+    |> (Random.lcg 123235)
+
+{{ Peels off the {type CoinFlip} ability replacing it with the lower level
+   {type Random} ability }}
+coinFlip.interpreters.runCoinFlipRandom : '{CoinFlip, e} a -> '{Random, e} a
+coinFlip.interpreters.runCoinFlipRandom comp _ =
+  handler = cases
+    { flipCoin -> k } -> handle k !Random.boolean with handler
+    { r } -> r
+  handle !comp with handler
+
+{{ Peels off the {type Console} ability replacing it with the lower level
+   {type IO} ability }}
+coinFlip.interpreters.runConsoleIO : '{Console, e} a -> '{Exception, IO, e} a 
+coinFlip.interpreters.runConsoleIO comp _ =
+  handler = cases
+    { printLine msg -> k } ->
+      console.printLine msg
+      handle !k with handler
+    { r } -> r 
+  handle !comp with handler
+
+-- Test interpreter
+
+{{ Runs any action with the {type CoinFlip} and {type Console} abilities in a
+   test environment accumulating all logs in a list and injecting a constant
+   coin value for each coin flip performed }}
+coinFlip.interpreters.runTestApp : Boolean -> '{CoinFlip, Console, e} a -> {e} ([Text], a)
+coinFlip.interpreters.runTestApp coinValue comp =
+  comp
+    |> runWithRiggedCoin coinValue
+    |> accumulateConsoleOutput
+    |> (f -> f ())
+
+coinFlip.interpreters.runWithRiggedCoin : Boolean -> '{CoinFlip, e} a -> '{e} a
+coinFlip.interpreters.runWithRiggedCoin coinValue comp _ =
+  handler = cases
+    { flipCoin -> k } -> handle k coinValue with handler
+    { r } -> r
+  handle !comp with handler
+
+coinFlip.interpreters.accumulateConsoleOutput : '{Console, e} a -> '{e} ([Text] , a)
+coinFlip.interpreters.accumulateConsoleOutput comp _ =
+  handler output = cases
+    { printLine msg -> k } -> handle !k with handler (output :+ msg)
+    { r } -> (output, r)
+  handle !comp with handler []
+
+test> coinFlip.test.whenTrue  = (runTestApp true  '(maybeDouble 10)) === (["Flipping a coin!"], 20) |> check
+test> coinFlip.test.whenFalse = (runTestApp false '(maybeDouble 10)) === (["Flipping a coin!"], 10) |> check
+
+-- Stepper interpreter
+
+{{ The mode with wich a {type Stepper} can perform its logging at each step }}
+structural type coinFlip.stepper.Mode = Wait | NonInteractive
+
+{{ An ability used to express the execution of code step by step where. 
+   In between steps the execution could be interrupted to ask the user for
+   an input }}
+structural ability coinFlip.stepper.Stepper where
+  askValue : Text -> (Text -> Optional a) -> a
+  notifyStep : coinFlip.stepper.Mode -> Text -> ()
+
+coinFlip.stepper.askChoice : [a] -> (a -> Text) -> Text -> {Stepper} a
+coinFlip.stepper.askChoice options toStr msg =
+  numberedOptions = indexed options
+  toString = cases (a, n) -> Nat.toText n ++ ". " ++ toStr a
+  notifyStep NonInteractive msg
+  map (toString >> notifyStep NonInteractive) numberedOptions
+  choice = askValue "Number of the chosen value: " Nat.fromText
+  match find (cases (_, n) -> n == choice) numberedOptions with
+    Some (res, _) -> res
+    None   ->
+      notifyStep NonInteractive "Invalid number"
+      askChoice options toStr msg
+
+coinFlip.stepper.interpreters.runStepperIO : '{Stepper} a -> {IO, Exception} a
+coinFlip.stepper.interpreters.runStepperIO comp = 
+  handler = cases
+    { r } -> r
+    { notifyStep mode msg -> k } ->
+      console.printLine msg
+      match mode with
+        Wait ->
+          console.printLine "(Press return key to continue)"
+          ignore !console.getLine
+        NonInteractive -> ()
+      handle !k with handler
+    { askValue msg parser -> k } ->
+      res = ask msg parser
+      handle k res with handler
+  handle !comp with handler
+
+coinFlip.stepper.interpreters.ask : Text -> (Text -> Optional a) -> {IO, Exception} a
+coinFlip.stepper.interpreters.ask msg parser =
+  console.printLine msg
+  match parser !console.getLine with
+    Some a -> a
+    None ->
+      console.printLine "Invalid inpnut"
+      ask msg parser
+
+{{ Translates the {type CoinFlip} ability in terms of the {type Stepper} one }}
+coinFlip.interpreters.coinFlipToStepper : '{CoinFlip, e} a -> '{Stepper, e} a
+coinFlip.interpreters.coinFlipToStepper comp _ =
+  handler = cases
+    { r } -> r
+    { flipCoin -> k } ->
+      res = askChoice [true, false] toText "What is the flip outcome?"
+      handle k res with handler
+  handle !comp with handler
+
+{{ Translates the {type Console} ability in terms of the {type Stepper} one }}
+coinFlip.interpreters.consoleToStepper : '{Console, e} a -> '{Stepper, e} a
+coinFlip.interpreters.consoleToStepper comp _ =
+  handler = cases
+    { r } -> r
+    { printLine msg -> k } ->
+      notifyStep Wait msg
+      handle !k with handler
+  handle !comp with handler
+
+coinFlip.README = {{
+  This is a simple example illustrating how Unison abilities can be used 
+  to model a computation performing side effects.
+  Abilities are a great tool to develop DSLs that closely match how we talk
+  about the domain while keeping the advantages of referential transparency
+  and code testability!
+
+  This is our simple running example:
+  @source{maybeDouble}
+
+  {maybeDouble} is simply a _description_ of the core domain logic involving
+  the {type Console} and {type CoinFlip} abilities. In order to execute an
+  actual program one has to _interpret_ it.
+  The advantage is that the
+  __description and interpretation of the program are completely decoupled__
+  and it is easy switching interpreters as needed.
+
+  You can see three different examples of interpretation:
+
+  - {coinFlip.main} interprets the program as one would expect, using a
+    random result for the coin flip and logging the messages to the console
+    thanks to the {runProductionApp} interpreter
+  - to test the core domain logic it is used the {runTestApp} interpreter
+    that accumulates all the logs in a list and injects a constant value as 
+    the coin flip result
+  - {coinFlip.stepper.main} interprets the program instructions step-by-step
+    stopping the execution at each coinFlip and asking the user to choose the
+    actual outcome of the coin flip that will be used to keep the program's
+    execution going
+
+}}

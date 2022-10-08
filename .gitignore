@@ -1,4 +1,5 @@
 .vscode
+.unisonHistory
 
 # Created by https://www.toptal.com/developers/gitignore/api/scala,sbt,metals,haskell
 # Edit at https://www.toptal.com/developers/gitignore?templates=scala,sbt,metals,haskell
