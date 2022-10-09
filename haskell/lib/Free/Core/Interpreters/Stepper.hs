@@ -9,13 +9,13 @@ import Free.Stepper.Core (Stepper, askBoundedEnum, notifyStepAndWait)
 
 appToStepperInterpreter :: AppDSL ~> Stepper
 appToStepperInterpreter = \case
-  EvalCoinFlip c k -> c `runWith` coinToStepperInterpreter >>= k
-  EvalConsole c k -> c `runWith` consoleToStepperInterpreter >>= k
+  EvalCoinFlip c k -> k <$> c `runWith` coinToStepperInterpreter
+  EvalConsole c k -> k <$> c `runWith` consoleToStepperInterpreter
 
 coinToStepperInterpreter :: CoinFlipDSL ~> Stepper
 coinToStepperInterpreter = \case
-  FlipCoin k -> askBoundedEnum "What is the flip result? " >>= k
+  FlipCoin k -> k <$> askBoundedEnum "What is the flip result? "
 
 consoleToStepperInterpreter :: ConsoleDSL ~> Stepper
 consoleToStepperInterpreter = \case
-  PrintLine msg k -> notifyStepAndWait msg >>= k
+  PrintLine msg k -> k <$> notifyStepAndWait msg

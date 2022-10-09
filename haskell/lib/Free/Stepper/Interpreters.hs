@@ -6,8 +6,8 @@ import Free.Stepper.Core (Mode (..), StepperDSL (..))
 
 stepperToIOInterpreter :: StepperDSL ~> IO
 stepperToIOInterpreter = \case
-  AskValue msg parser k -> askValueIO msg parser >>= k
-  NotifyStep mode msg k -> notifyStepIO mode msg >>= k
+  AskValue msg parser k -> k <$> askValueIO msg parser
+  NotifyStep mode msg k -> k <$> notifyStepIO mode msg
 
 askValueIO :: String -> (String -> Maybe a) -> IO a
 askValueIO msg parser = do

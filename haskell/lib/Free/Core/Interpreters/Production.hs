@@ -10,13 +10,13 @@ import System.Random (randomIO)
 
 appToIOInterpreter :: AppDSL ~> IO
 appToIOInterpreter = \case
-  EvalCoinFlip c k -> c `runWith` coinToIOInterpreter >>= k
-  EvalConsole c k -> c `runWith` consoleToIOInterpreter >>= k
+  EvalCoinFlip c k -> k <$> c `runWith` coinToIOInterpreter
+  EvalConsole c k -> k <$> c `runWith` consoleToIOInterpreter
 
 coinToIOInterpreter :: CoinFlipDSL ~> IO
 coinToIOInterpreter = \case
-  FlipCoin k -> randomIO >>= k
+  FlipCoin k -> k <$> randomIO
 
 consoleToIOInterpreter :: ConsoleDSL ~> IO
 consoleToIOInterpreter = \case
-  PrintLine msg k -> putStrLn msg >> k ()
+  PrintLine msg k -> k <$> putStrLn msg

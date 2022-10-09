@@ -19,12 +19,12 @@ module Free.Core (
   runWith,
 ) where
 
-import Control.Monad.Free (Free (..), iterM, liftF)
+import Control.Monad.Free (Free (..), foldFree, liftF)
 
-type f ~> g = forall a. f (g a) -> g a
+type f ~> g = forall a. f a -> g a
 
-runWith :: (Functor f, Monad g) => Free f a -> (f ~> g) -> g a
-runWith app interpreter = iterM interpreter app
+runWith :: Monad g => Free f a -> (f ~> g) -> g a
+runWith app interpreter = foldFree interpreter app
 
 -- Our core domain actions, we can be as granular as we want
 -- but if our program needs to use more than one DSL we need to combine
