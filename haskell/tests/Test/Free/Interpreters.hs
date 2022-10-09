@@ -1,21 +1,18 @@
+{-# LANGUAGE FlexibleContexts #-}
+
 module Test.Free.Interpreters (runWithRiggedCoin) where
 
-import Control.Monad.Trans.Class (lift)
-import Control.Monad.Trans.Reader (Reader, ask, runReader)
-import Control.Monad.Trans.Writer (WriterT (runWriterT), tell)
-import Free.Core (App, AppDSL (..), CoinFlipDSL (..), ConsoleDSL (..), runWith, type (~>))
-
-type TestApp = WriterT String (Reader Bool)
+import Control.Monad.RWS.Class (MonadWriter (tell))
+import Control.Monad.Reader.Class (MonadReader (ask))
+import Control.Monad.Trans.Reader (runReader)
+import Control.Monad.Trans.Writer (WriterT (runWriterT))
+import Free.Core (App, AppDSL (..), CoinFlipDSL (..), ConsoleDSL (..), runWith)
 
 runWithRiggedCoin :: App a -> Bool -> (a, String)
-runWithRiggedCoin app = runReader $ runWriterT $ app `runWith` interpreter
+runWithRiggedCoin app = runReader $ runWriterT $ app `runWith` testInterpreter
  where
-  interpreter = \case
+  coinFlipInterpreter (FlipCoin k) = k <$> ask
+  consoleTestInterpreter (PrintLine msg k) = k <$> tell msg
+  testInterpreter = \case
     EvalCoinFlip c k -> k <$> c `runWith` coinFlipInterpreter
     EvalConsole c k -> k <$> c `runWith` consoleTestInterpreter
-
-coinFlipInterpreter :: CoinFlipDSL ~> TestApp
-coinFlipInterpreter (FlipCoin k) = k <$> lift ask
-
-consoleTestInterpreter :: ConsoleDSL ~> TestApp
-consoleTestInterpreter (PrintLine msg k) = k <$> tell msg
