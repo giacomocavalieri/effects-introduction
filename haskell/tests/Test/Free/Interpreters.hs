@@ -1,21 +1,21 @@
 module Test.Free.Interpreters (runWithRiggedCoin) where
 
-import Control.Monad.Free (iterM)
-import Control.Monad.Trans.Writer (Writer, runWriter, tell)
-import Free.Core (App, AppDSL (..), CoinFlip, CoinFlipDSL (..), Console, ConsoleDSL (..), runWith, type (~>))
+import Control.Monad.Trans.Class (lift)
+import Control.Monad.Trans.Reader (Reader, ask, runReader)
+import Control.Monad.Trans.Writer (WriterT (runWriterT), tell)
+import Free.Core (App, AppDSL (..), CoinFlipDSL (..), ConsoleDSL (..), runWith, type (~>))
+
+type TestApp = WriterT String (Reader Bool)
 
 runWithRiggedCoin :: App a -> Bool -> (a, String)
-runWithRiggedCoin app coinResult = runWriter $ app `runWith` interpreter
+runWithRiggedCoin app = runReader $ runWriterT $ app `runWith` interpreter
  where
-  interpreter :: AppDSL ~> Writer String
   interpreter = \case
-    EvalCoinFlip c k -> k <$> interpretTestCoinFlip coinResult c
-    EvalConsole c k -> k <$> interpretTestConsole c
+    EvalCoinFlip c k -> k <$> c `runWith` coinFlipInterpreter
+    EvalConsole c k -> k <$> c `runWith` consoleTestInterpreter
 
-interpretTestCoinFlip :: Monad m => Bool -> CoinFlip a -> m a
-interpretTestCoinFlip coinResult = iterM $ \case
-  FlipCoin k -> k coinResult
+coinFlipInterpreter :: CoinFlipDSL ~> TestApp
+coinFlipInterpreter (FlipCoin k) = k <$> lift ask
 
-interpretTestConsole :: Console a -> Writer String a
-interpretTestConsole = iterM $ \case
-  PrintLine msg k -> tell msg >> k ()
+consoleTestInterpreter :: ConsoleDSL ~> TestApp
+consoleTestInterpreter (PrintLine msg k) = k <$> tell msg
