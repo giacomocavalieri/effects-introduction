@@ -1,4 +1,6 @@
 # effects-introduction
+![Haskell CI status](https://github.com/giacomocavalieri/effects-introduction/actions/workflows/haskell-build.yaml/badge.svg)
+![Scala CI status](https://github.com/giacomocavalieri/effects-introduction/actions/workflows/scala-build.yaml/badge.svg)
 
 The project aims to get an overview of some of the most prominent (or emerging) effect systems:
 
