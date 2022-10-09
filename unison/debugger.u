@@ -1,0 +1,93 @@
+{{ The debugger ability, allows to set named breakpoints and to
+   debug values that can be converted from and to text }}
+structural ability debugger.Debug where
+  setBreakpoint : Text -> ()
+  debugValue : (a -> Text) -> (Text -> Optional a) -> a -> a
+
+-- Utility functions to debug values
+debugger.debugNat : Nat -> {Debug} Nat
+debugger.debugNat = debugValue Nat.toText Nat.fromText
+
+debugger.debugText : Text -> {Debug} Text
+debugger.debugText = debugValue id Some
+
+{{ Takes a debuggable computation and runs it to completion 
+   ignoring all breakpoints }}
+debugger.interpreters.runToCompletion : '{Debug, e} a -> '{e} a
+debugger.interpreters.runToCompletion comp = do 
+  handler = cases
+    { r } -> r
+    { setBreakpoint _ -> k } -> handle !k with handler
+    { debugValue _ _ a -> k } -> handle k a with handler
+  handle !comp with handler
+
+{{ The options one may have when stopped at a debug breakpoint }}
+structural type debugger.DebugOption = Continue | Ignore | Back | Replace
+
+debugger.DebugOption.toText : DebugOption -> Text
+debugger.DebugOption.toText = cases
+  Continue -> "(Enter) to continue" 
+  Ignore -> "(i)gnore breakpoints"
+  Back -> "(b)ack to previous breakpoint"
+  Replace -> "(r)eplace current value with a new one"
+
+debugger.DebugOption.fromText : Text -> DebugOption
+debugger.DebugOption.fromText = cases
+  "i" -> Ignore
+  "b" -> Back
+  "r" -> Replace
+  _ -> Continue
+
+{{ Takes a debuggable computation and debugs it stopping at each
+   breakpoint and debuggable value it finds on its way }}
+debugger.interpreters.debug : '{Debug, e} a -> '{IO, Exception, e} a
+debugger.interpreters.debug comp = do
+  use console
+  use List +:
+
+  printOptions isReplaceable =
+    options = if isReplaceable
+      then [Continue, Ignore, Back, Replace]
+      else [Continue, Ignore, Back]
+    map (toText >> ((++) "• ") >> printLine) options
+
+  actOnOption isReplaceable default actions =
+    printOptions isReplaceable
+    option = fromText !getLine
+    !(Map.getOrElse default option (Map.fromList actions))
+
+  handler : '{IO, Exception, e} a -> Request Debug a -> {IO, Exception, e} a
+  handler prev req =
+    cur = '(handler prev req)
+    match req with
+      { r } -> r
+      { setBreakpoint name -> k } ->
+        printLine ("\nAt breakpoint " ++ name)
+        actOnOption false '(handle !k with handler cur)
+          [ (Ignore, runToCompletion k), (Back, prev) ]
+      { debugValue toText fromText a -> k } ->
+        replaceAction = do
+          putText stdOut "New value: "
+          rawValue = !getLine
+          match fromText rawValue with
+            Some a' -> handle k a' with handler cur
+            None ->
+              printLine (rawValue ++ " is not a valid value")
+              !replaceAction
+        printLine ("\nStopped at value: " ++ toText a)
+        actOnOption true '(handle k a with handler cur)
+          [ (Ignore, runToCompletion '(k a)), (Back, prev), (Replace, replaceAction) ]
+  handle !comp with handler (debug comp)
+
+debugger.example.debugMe : Nat -> Nat --{Debug} Nat
+debugger.example.debugMe n =
+  m = double n -- |> debugNat
+  if mod m 2 === 0 then
+    -- setBreakpoint "Even"
+    m * 2
+  else
+    -- setBreakpoint "Odd"
+    m
+
+debugger.example.double : Nat -> Nat
+debugger.example.double n = n * 2 + 1
