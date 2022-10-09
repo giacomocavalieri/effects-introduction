@@ -14,6 +14,10 @@ jobs:
         with:
           ghc-version: 9.2.4
           cabal-version: 3.6.2.0
+      - name: configure Cabal
+        run: |
+          cd haskell
+          cabal configure --enable-tests --enable-benchmarks --enable-documentation --test-show-details=direct --write-ghc-environment-files=always
       - name: freeze Cabal plan
         run: |
           cd haskell
@@ -22,11 +26,14 @@ jobs:
         uses: actions/cache@v2
         with:
           path: |
-            ${{ steps.setup-haskell-build-env.outputs.cabal-store }}
+            ${{ steps.setup-haskell.outputs.cabal-store }}
             haskell/dist-newstyle
           key: cabal-${{ hashFiles('haskell/cabal.project.freeze') }}
-          restore-keys: cabal-
+      - name: build
+        run: |
+          cd haskell
+          cabal build all
       - name: test
         run: |
           cd haskell
-          cabal test --test-show-details=direct
+          cabal test all --test-show-details=direct
