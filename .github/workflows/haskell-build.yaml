@@ -29,4 +29,4 @@ jobs:
       - name: test
         run: |
           cd haskell
-          cabal test
+          cabal test --test-show-details=direct
